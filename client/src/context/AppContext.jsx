@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { dummyChats, dummyUserData } from '../assets/assets'
 import { useEffect } from 'react'
+import axios from 'axios';
+import toast from 'react-hot-toast'
+
+axios.defaults.baseURL = import.meta.env.VITE_SERVER_URL;
 
 
 const AppContext = createContext()
@@ -15,14 +19,55 @@ export const AppContextProvider = ({ children }) => {
     const [chats, setChats] = useState([]);
     const [selectedChat, setSelectedChat] = useState(null);
     const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
-    
+     const [token, setToken] = useState(localStorage.getItem('token') || null);
+       const[loadingUser,setLoadingUser] = useState(true);
+
     const fetchuser = async () => {
-        setUser(dummyUserData)
+        try {
+        const {data} =   await axios.get('/api/user/data', {headers: {Authorization: token}})
+        if(data.success){
+            setUser(data.user)
+        }else{
+            toast.error(data.message)
+        }
+    
+    } catch (error) {
+             toast.error(error.message)
+        }finally{
+            setLoadingUser(false)
+        }
+    }
+
+    const createNewChat = async () => {
+        try {
+            if(!user) return toast('login to create a new chat')
+                navigate('/')
+            
+            await axios.get('/api/chat/create', {headers: {Authorization: token}})
+               await fetchUsersChat()
+        } catch (error) {
+             toast.error(error.message)
+        }
     }
 
    const fetchUsersChat = async () => {
-    setChats(dummyChats)
-    setSelectedChat(dummyChats[0])
+     try {
+        const {data} = await axios.get('/api/chat/get', {headers: {Authorization: token}})
+        if(data.success){
+            setChats(data.chats)
+            /// if usear has no chat the create
+            if(data.chats.length === 0){
+                await createNewChat();
+                return fetchUsersChat();
+            }else{
+                setSelectedChat(data.chats[0]);
+            }
+        }else{
+            toast.error(data.message);
+        }
+     } catch (error) {
+         toast.error(error.message)
+     }
    }
 
    useEffect(() => {
@@ -45,8 +90,14 @@ export const AppContextProvider = ({ children }) => {
    }, [user]);
 
    useEffect(() => {
-        fetchuser();
-    }, []);
+      if(token){
+         fetchuser();
+      }else{
+        setUser(null)
+        setLoadingUser(false)
+      }
+       
+    }, [token]);
 
 
     const value = {
@@ -59,7 +110,7 @@ export const AppContextProvider = ({ children }) => {
         setSelectedChat,
         theme,
         setTheme,
-        fetchuser
+        fetchuser,createNewChat,loadingUser,fetchUsersChat,token,setToken,axios
     }
   return (
     <AppContext.Provider value={value}>
