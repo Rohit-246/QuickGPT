@@ -23,7 +23,7 @@ import openai from "../configs/openai.js";
     chat.messages.push({role: "user", content: prompt, timestamp: Date.now() , isImage: false})
 
     const {choices} = await openai.chat.completions.create({
-    model: "gemini-3.8-flash",
+    model: "gemini-3.6-flash",
     messages: [
        
         {
